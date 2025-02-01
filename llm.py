@@ -1,8 +1,9 @@
 import os
+import time
 import threading
 from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStreamer
 
-load_dir = "model"
+load_dir = "models"
 
 class CustomLLM:
     _instance = None
@@ -18,7 +19,10 @@ class CustomLLM:
         self.generated_text = ""
         self.tokenizer = AutoTokenizer.from_pretrained(load_dir, cache_dir=load_dir)
         self.streamer = TextIteratorStreamer(
-            self.tokenizer, cache_dir=load_dir, skip_special_tokens=True
+            self.tokenizer,
+            cache_dir=load_dir,
+            skip_special_tokens=True,
+            skip_prompt=True
         )
         self.model = AutoModelForCausalLM.from_pretrained(
             load_dir,
@@ -38,6 +42,9 @@ class CustomLLM:
                 do_sample=True,
                 temperature=0.01,
                 output_scores=False,
+                repetition_penalty=1.25,
+                top_p=0.9,
+                top_k=20,
                 streamer=self.streamer,
             )
 
@@ -46,6 +53,9 @@ class CustomLLM:
 
         for token in self.streamer:
             self.generated_text += token
-            print(token, end="", flush=True)
+            #print(token, end="", flush=True)
+            for digit in token:
+                print(digit, end="", flush=True)
+                time.sleep(0.005)
 
         return self.generated_text

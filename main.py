@@ -1,7 +1,7 @@
 from llm import CustomLLM
 
+input = "What is deep learning ?"
+
 model = CustomLLM()
 
-input = "Describe short and concise what is deep learning ?"
-
-model.predict(input, 128)
+model.predict(input, 2048)

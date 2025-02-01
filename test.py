@@ -1,40 +1,38 @@
 import os
 import time
-import torch
 import threading
 from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStreamer
 
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
-load_dir = "model"
+load_dir = "models"
+# gguf_file = "Llama-3.2-3B-Instruct-IQ3_M.gguf"
 
 tokenizer = AutoTokenizer.from_pretrained(load_dir)
 
 model = AutoModelForCausalLM.from_pretrained(
     load_dir,
-    torch_dtype=torch.bfloat16,
+    torch_dtype='auto',
     device_map="mps",
     num_return_sequences=1,
 )
 
 
 # Input text
-input_text = (
-    "Hi, what is deep learning, compare deep learning and machine learning in table ?"
-)
+messages = [
+    {'role': 'system', 'content': 'You are a professional chatbot in AI domain, your name is Mr Beast'},
+    {'role': 'user', 'content': "hello, what is deep learning ?"}
+]
 
-input_ids = tokenizer(input_text, return_tensors="pt").to("mps")
+input_ids = tokenizer.apply_chat_template(messages, return_tensors="pt", return_dict=True).to("mps")
 
 generated_text = "" 
 
-# Dọn bộ nhớ GPU
-torch.cuda.empty_cache()
-
 # Tạo streamer để xử lý token khi được sinh
-streamer = TextIteratorStreamer(tokenizer, skip_special_tokens=True)
+streamer = TextIteratorStreamer(tokenizer, skip_special_tokens=True, skip_prompt=True)
 
 # Thiết lập giới hạn độ dài tối đa
-max_output_length = 512
+max_output_length = 2048
 count = 0
 start_time = time.time()
 tokens_per_second = 0
@@ -48,7 +46,7 @@ def generate_tokens():
         do_sample=True,
         temperature=0.01,
         top_k=50,
-        repetition_penalty=1.2,
+        repetition_penalty=1.25,
         eos_token_id=tokenizer.eos_token_id,
         pad_token_id=tokenizer.pad_token_id,
         output_scores=False,
@@ -69,7 +67,10 @@ for token in streamer:
     count += 1
     if elapsed_time > 0:
         tokens_per_second = 1 / elapsed_time
-    print(token, end="", flush=True)  # Hiển thị từng token ngay lập tức
+    # print(token, end="", flush=True)  # Hiển thị từng token ngay lập tức
+    for digit in token:
+        print(digit, end="", flush=True)
+        time.sleep(0.01)
     last_time = current_time
 
 # Tổng kết
